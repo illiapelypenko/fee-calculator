@@ -3,7 +3,7 @@ import { BankService } from '../services/bitBankService'
 import { BankUser, BankUserType } from './bankUser'
 
 export interface Bank {
-  operations: Array<BankOperation>
+  cleanOperations: Array<BankOperation>
   users: Array<BankUser>
   service: BankService
   loadOperationsFromFile(filePath: string): void

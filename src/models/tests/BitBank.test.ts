@@ -1,28 +1,28 @@
 import path from 'path'
-import { BitBank, BitBankJuridicalUser, BitBankNaturalUser } from '../src/models'
-import { Currency, OperationType, BankUserType } from '../src/types'
-import { formatMoneyToString } from '../src/utils'
-
-let bitBank: BitBank
-
-beforeEach(() => {
-  bitBank = new BitBank()
-})
+import { BitBank, BitBankUser } from '../index'
+import { BankUserType, Currency, OperationType } from '../../types'
+import { formatMoneyToString } from '../../utils'
 
 describe('BitBank', () => {
+  let bitBank: BitBank
+
+  beforeEach(() => {
+    bitBank = new BitBank()
+  })
+
   describe('BitBank.parseRawOperation', () => {
     test('right operation parsing', () => {
       const operation = bitBank.parseRawOperation({
         date: '2016-01-05',
         user_id: 1,
-        user_type: 'natural' as BankUserType.Natural,
-        type: 'cash_in' as OperationType.CashIn,
-        operation: { amount: 200.0, currency: 'EUR' as Currency.EUR },
+        user_type: BankUserType.Natural,
+        type: OperationType.CashIn,
+        operation: { amount: 200.0, currency: Currency.EUR },
       })
 
       expect(operation).toEqual({
         date: '2016-01-05',
-        user: new BitBankNaturalUser(1, bitBank),
+        user: new BitBankUser(1, BankUserType.Natural, bitBank),
         type: OperationType.CashIn,
         operation: { amount: 200.0, currency: Currency.EUR },
       })
@@ -33,13 +33,13 @@ describe('BitBank', () => {
     test('create natural user', () => {
       const naturalUser = bitBank.createBankUser(1, BankUserType.Natural)
 
-      expect(naturalUser instanceof BitBankNaturalUser).toBe(true)
+      expect(naturalUser.type).toBe(BankUserType.Natural)
     })
 
     test('create juridical user', () => {
       const juridicalUser = bitBank.createBankUser(2, BankUserType.Juridical)
 
-      expect(juridicalUser instanceof BitBankJuridicalUser).toBe(true)
+      expect(juridicalUser.type).toBe(BankUserType.Juridical)
     })
 
     test('do not create user with the same id', () => {
@@ -54,7 +54,7 @@ describe('BitBank', () => {
     test('bank loads and parses operations correctly', () => {
       bitBank.loadOperationsFromFile(path.join(__dirname, 'testData.json'))
 
-      expect(bitBank.operations.length > 0).toBe(true)
+      expect(bitBank.cleanOperations.length > 0).toBe(true)
     })
   })
 
@@ -67,7 +67,7 @@ describe('BitBank', () => {
           amount: 10000,
           currency: Currency.EUR,
         },
-        user: new BitBankNaturalUser(10, bitBank),
+        user: new BitBankUser(10, BankUserType.Natural, bitBank),
       }
 
       const fee = await bitBank.performOperation(operation)

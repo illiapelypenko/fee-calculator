@@ -1,17 +1,17 @@
-import { BitBank, BitBankJuridicalUser, BitBankNaturalUser } from '../src/models'
-import { Currency, OperationType, BankUser } from '../src/types'
-
-let bitBank: BitBank
-let juridicalUser: BankUser
-let naturalUser: BankUser
-
-beforeEach(() => {
-  bitBank = new BitBank()
-  juridicalUser = new BitBankJuridicalUser(1, bitBank)
-  naturalUser = new BitBankNaturalUser(1, bitBank)
-})
+import { BitBank, BitBankUser } from '../index'
+import { BankUser, BankUserType, Currency, OperationType } from '../../types'
 
 describe('BitBankUser', () => {
+  let bitBank: BitBank
+  let juridicalUser: BankUser
+  let naturalUser: BankUser
+
+  beforeEach(() => {
+    bitBank = new BitBank()
+    juridicalUser = new BitBankUser(1, BankUserType.Juridical, bitBank)
+    naturalUser = new BitBankUser(1, BankUserType.Natural, bitBank)
+  })
+
   describe('BitBankJuridicalUser', () => {
     describe('cash in', () => {
       test('small cash in', async () => {

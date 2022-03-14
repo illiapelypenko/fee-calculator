@@ -4,9 +4,9 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "ts-node src/index.ts",
-    "test": "jest",
-    "build": "webpack"
+    "start": "ts-node src/index.ts ../input.json",
+    "build": "webpack",
+    "test": "jest"
   },
   "keywords": [],
   "author": "",
@@ -30,7 +30,6 @@
   },
   "dependencies": {
     "axios": "^0.26.0",
-    "moment": "^2.29.1",
-    "momentjs": "^2.0.0"
+    "date-fns": "^2.28.0"
   }
 }

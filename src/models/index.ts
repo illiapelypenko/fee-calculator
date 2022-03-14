@@ -1,3 +1,2 @@
-export * from './BitBank'
-export * from './BankUser'
-export * from './bankUsers'
+export { BitBank } from './BitBank'
+export { BitBankUser } from './BankUser'

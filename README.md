@@ -4,13 +4,13 @@
 
 Edit files inside src folder and run:
 
-npm build - to create app.js bundle of the project
+```npm build``` - to create app.js bundle of the project
 
-node app.js input.json - run final bundle with "input.json" as path to data file
+```npm start``` - run precompiled project
 
-npm start - run precompiled project
+```npm test``` - to run tests
 
-npm test - to run tests
+```node app.js input.json``` - run final bundle with "input.json" as path to data file
 
 ## Task
 

@@ -1,6 +1,6 @@
 import { Currency } from './currency'
 
-interface Money {
+export interface Money {
   amount: number
   currency: Currency
 }
@@ -10,4 +10,8 @@ export interface OperationConfig {
   min?: Money
   max?: Money
   week_limit?: Money
+}
+
+export interface OperationConfigWithWeekLimit extends OperationConfig {
+  week_limit: Money
 }
