@@ -41,7 +41,7 @@ export class BitBankService implements BankService {
 
       return await this.getConfig(path)
     } catch {
-      throw new Error('No cash out config')
+      throw new Error(`No cash out config for ${userType} user`)
     }
   }
 }

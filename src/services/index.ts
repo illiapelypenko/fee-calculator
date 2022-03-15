@@ -1,1 +1,1 @@
-export { BitBankService } from './bitBankService'
+export { BitBankService, BankService } from './BitBankService'

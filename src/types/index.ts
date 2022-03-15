@@ -1,4 +1,4 @@
-export { Money, OperationConfig, OperationConfigWithWeekLimit } from './operationConfig'
+export { OperationConfig, OperationConfigWithWeekLimit } from './operationConfig'
 export { Currency } from './currency'
 export { OperationType, Operation, BankOperation, RawOperation } from './operation'
 export { Bank } from './bank'

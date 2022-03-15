@@ -1,10 +1,10 @@
 import { BitBank, BitBankUser } from '../index'
-import { BankUser, BankUserType, Currency, OperationType } from '../../types'
+import { BankUserType, Currency, OperationType } from '../../types'
 
 describe('BitBankUser', () => {
   let bitBank: BitBank
-  let juridicalUser: BankUser
-  let naturalUser: BankUser
+  let juridicalUser: BitBankUser
+  let naturalUser: BitBankUser
 
   beforeEach(() => {
     bitBank = new BitBank()
@@ -131,6 +131,110 @@ describe('BitBankUser', () => {
 
         expect(fee).toBe(0.3)
       })
+    })
+  })
+
+  describe('getFeeWithLimits', () => {
+    const config = {
+      percents: 0.3,
+      week_limit: {
+        amount: 1000,
+        currency: Currency.EUR,
+      },
+    }
+
+    test('returns correct fee, one operation, amount is below limits', () => {
+      const operation = {
+        date: '2016-01-05',
+        user: naturalUser,
+        type: OperationType.CashOut,
+        operation: { amount: 600, currency: Currency.EUR },
+      }
+
+      const actualResult = naturalUser.getFeeWithLimits(operation, config)
+
+      const expectedResult = 0
+
+      expect(actualResult).toBe(expectedResult)
+    })
+
+    test('returns correct fee, one operation, amount is above limits', () => {
+      const operation = {
+        date: '2016-01-05',
+        user: naturalUser,
+        type: OperationType.CashOut,
+        operation: { amount: 1600, currency: Currency.EUR },
+      }
+
+      const actualResult = naturalUser.getFeeWithLimits(operation, config)
+
+      const expectedResult = 1.8
+
+      expect(actualResult).toBe(expectedResult)
+    })
+
+    test('returns correct fee, two operations, amount is above limits', () => {
+      const operation = {
+        date: '2016-01-05',
+        user: naturalUser,
+        type: OperationType.CashOut,
+        operation: { amount: 800, currency: Currency.EUR },
+      }
+
+      naturalUser.getFeeWithLimits(operation, config)
+      const actualResult = naturalUser.getFeeWithLimits(operation, config)
+
+      const expectedResult = 1.8
+
+      expect(actualResult).toBe(expectedResult)
+    })
+  })
+
+  describe('processOperationWithConfig', () => {
+    test('returns correct fee when config has max field', () => {
+      const config = {
+        percents: 1,
+        max: {
+          amount: 10,
+          currency: Currency.EUR,
+        },
+      }
+
+      const operation = {
+        date: '2016-01-05',
+        user: naturalUser,
+        type: OperationType.CashOut,
+        operation: { amount: 2000, currency: Currency.EUR },
+      }
+
+      const actualResult = naturalUser.processOperationWithConfig(operation, config)
+
+      const expectedResult = 10
+
+      expect(actualResult).toBe(expectedResult)
+    })
+
+    test('returns correct fee when config has min field', () => {
+      const config = {
+        percents: 0.01,
+        min: {
+          amount: 1,
+          currency: Currency.EUR,
+        },
+      }
+
+      const operation = {
+        date: '2016-01-05',
+        user: naturalUser,
+        type: OperationType.CashOut,
+        operation: { amount: 10, currency: Currency.EUR },
+      }
+
+      const actualResult = naturalUser.processOperationWithConfig(operation, config)
+
+      const expectedResult = 1
+
+      expect(actualResult).toBe(expectedResult)
     })
   })
 })

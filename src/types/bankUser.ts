@@ -1,5 +1,5 @@
 import { Bank } from './bank'
-import { BankOperation, Operation } from './operation'
+import { BankOperation, Operation, OperationType } from './operation'
 import { OperationConfig } from './operationConfig'
 
 export enum BankUserType {
@@ -12,17 +12,14 @@ export interface BankUser {
   type: BankUserType
   bank: Bank
   roundNumber: number
+  operationLimitsByYear: {
+    [key in OperationType]: {
+      [year: string]: {
+        [weekNumber: string]: number
+      }
+    }
+  }
   cashIn(operation: BankOperation): Promise<number>
   cashOut(operation: BankOperation): Promise<number>
   processOperationWithConfig(operation: Operation, config: OperationConfig): number
-  cashInAmountByYear: {
-    [year: string]: {
-      [weekNumber: string]: number
-    }
-  }
-  cashOutAmountByYear: {
-    [year: string]: {
-      [weekNumber: string]: number
-    }
-  }
 }

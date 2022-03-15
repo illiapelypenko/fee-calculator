@@ -7,14 +7,16 @@ import {
   OperationConfigWithWeekLimit,
   OperationType,
 } from '../types'
-import { getPercentageFromAmount, getWeekNumber, getYearNumber, round } from '../utils'
+import { getPercentageFromAmount, getWeekNumber, getYearNumber, hasWeekLimit, round } from '../utils'
 
 export class BitBankUser implements BankUser {
   id
   type
 
-  cashInAmountByYear: BankUser['cashInAmountByYear'] = {}
-  cashOutAmountByYear: BankUser['cashOutAmountByYear'] = {}
+  operationLimitsByYear: BankUser['operationLimitsByYear'] = {
+    [OperationType.CashIn]: {},
+    [OperationType.CashOut]: {},
+  }
 
   roundNumber = 2
 
@@ -27,10 +29,7 @@ export class BitBankUser implements BankUser {
   }
 
   getFeeWithLimits(operation: Operation, config: OperationConfigWithWeekLimit) {
-    const limits = {
-      [OperationType.CashIn]: this.cashInAmountByYear,
-      [OperationType.CashOut]: this.cashOutAmountByYear,
-    }[operation.type]
+    const limits = this.operationLimitsByYear[operation.type]
 
     const year = getYearNumber(operation.date)
     const weekNumber = getWeekNumber(operation.date)
@@ -55,23 +54,21 @@ export class BitBankUser implements BankUser {
   }
 
   processOperationWithConfig(operation: Operation, config: OperationConfig) {
-    const percentageFee = getPercentageFromAmount(operation.operation.amount, config.percents)
+    let fee = getPercentageFromAmount(operation.operation.amount, config.percents)
 
-    let fee = percentageFee
-
-    if ('week_limit' in config) {
-      fee = this.getFeeWithLimits(operation, config as OperationConfigWithWeekLimit)
+    if (hasWeekLimit(config)) {
+      fee = this.getFeeWithLimits(operation, config)
     }
 
     const minFee = config.min?.amount
     const maxFee = config.max?.amount
 
-    if (minFee) {
-      fee = percentageFee < minFee ? minFee : percentageFee
+    if (minFee && fee < minFee) {
+      fee = minFee
     }
 
-    if (maxFee) {
-      fee = percentageFee > maxFee ? maxFee : percentageFee
+    if (maxFee && fee > maxFee) {
+      fee = maxFee
     }
 
     return round(fee, this.roundNumber)

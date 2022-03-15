@@ -26,7 +26,7 @@ const configs = {
 
 const axios = {
   get: jest.fn(url => {
-    const path = url.split(`${BASE_BIT_BANK_API_URL}`)[1] as keyof typeof configs
+    const path: keyof typeof configs = url.split(`${BASE_BIT_BANK_API_URL}`)[1]
 
     const data = configs[path]
 
@@ -34,5 +34,7 @@ const axios = {
   }),
   create: () => axios,
 }
+
+afterEach(() => axios.get.mockClear())
 
 export default axios

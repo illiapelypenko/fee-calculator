@@ -3,6 +3,8 @@ import { BitBank, BitBankUser } from '../index'
 import { BankUserType, Currency, OperationType } from '../../types'
 import { formatMoneyToString } from '../../utils'
 
+jest.mock('fs')
+
 describe('BitBank', () => {
   let bitBank: BitBank
 
@@ -54,12 +56,29 @@ describe('BitBank', () => {
     test('bank loads and parses operations correctly', () => {
       bitBank.loadOperationsFromFile(path.join(__dirname, 'testData.json'))
 
-      expect(bitBank.cleanOperations.length > 0).toBe(true)
+      expect(bitBank.operationsToProcess.length > 0).toBe(true)
+    })
+  })
+
+  describe('BitBank.cleanOperationsToProcess', () => {
+    test('bank clears operations correctly', () => {
+      bitBank.operationsToProcess = [
+        {
+          date: '2016-01-05',
+          user: new BitBankUser(1, BankUserType.Natural, bitBank),
+          type: OperationType.CashIn,
+          operation: { amount: 200.0, currency: Currency.EUR },
+        },
+      ]
+
+      bitBank.cleanOperationsToProcess()
+
+      expect(bitBank.operationsToProcess.length).toBe(0)
     })
   })
 
   describe('BitBank.performOperation', () => {
-    test('bank performs operation correctly', async () => {
+    test('bank performs cash in operation correctly', async () => {
       const operation = {
         date: '2022-01-01',
         type: OperationType.CashIn,
@@ -73,6 +92,66 @@ describe('BitBank', () => {
       const fee = await bitBank.performOperation(operation)
 
       expect(fee).toBe(3)
+    })
+
+    test('bank performs cash out operation correctly', async () => {
+      const operation = {
+        date: '2022-01-01',
+        type: OperationType.CashOut,
+        operation: {
+          amount: 300,
+          currency: Currency.EUR,
+        },
+        user: new BitBankUser(10, BankUserType.Juridical, bitBank),
+      }
+
+      const fee = await bitBank.performOperation(operation)
+
+      expect(fee).toBe(0.9)
+    })
+
+    test('fails on unknown operation type', async () => {
+      const operation = {
+        date: '2022-01-01',
+        type: 'cancel' as OperationType,
+        operation: {
+          amount: 10000,
+          currency: Currency.EUR,
+        },
+        user: new BitBankUser(10, BankUserType.Natural, bitBank),
+      }
+
+      await expect(bitBank.performOperation(operation)).rejects.toEqual(new Error('Unknown operation type'))
+    })
+  })
+
+  describe('Bitbank.processOperations', () => {
+    test('process operations correctly', async () => {
+      bitBank.operationsToProcess = [
+        {
+          date: '2022-01-01',
+          type: OperationType.CashIn,
+          operation: {
+            amount: 10000,
+            currency: Currency.EUR,
+          },
+          user: new BitBankUser(10, BankUserType.Natural, bitBank),
+        },
+        {
+          date: '2022-01-01',
+          type: OperationType.CashOut,
+          operation: {
+            amount: 300,
+            currency: Currency.EUR,
+          },
+          user: new BitBankUser(10, BankUserType.Juridical, bitBank),
+        },
+      ]
+
+      const fees = await bitBank.processOperations()
+
+      expect(bitBank.operationsToProcess.length).toBe(0)
+      expect(fees).toEqual([3, 0.9])
     })
   })
 

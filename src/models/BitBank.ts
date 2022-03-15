@@ -1,11 +1,10 @@
 import fs from 'fs'
 import { Bank, BankOperation, BankUser, BankUserType, OperationType, RawOperation } from '../types'
-import { BitBankService } from '../services'
-import { BankService } from '../services/bitBankService'
+import { BankService, BitBankService } from '../services'
 import { BitBankUser } from './BankUser'
 
 export class BitBank implements Bank {
-  cleanOperations: Array<BankOperation> = []
+  operationsToProcess: Array<BankOperation> = []
   users: Array<BankUser> = []
   service: BankService = new BitBankService()
 
@@ -23,14 +22,18 @@ export class BitBank implements Bank {
     return newUser
   }
 
+  cleanOperationsToProcess() {
+    this.operationsToProcess = []
+  }
+
   loadOperationsFromFile(filePath: string) {
     const file = fs.readFileSync(filePath, 'utf8')
 
     const rawOperations: Array<RawOperation> = JSON.parse(file)
 
-    const cleanOperations = rawOperations.map(operation => this.parseRawOperation(operation))
+    const operationsToProcess = rawOperations.map(operation => this.parseRawOperation(operation))
 
-    this.cleanOperations.push(...cleanOperations)
+    this.operationsToProcess.push(...operationsToProcess)
   }
 
   parseRawOperation(rawOperation: RawOperation) {
@@ -46,14 +49,14 @@ export class BitBank implements Bank {
 
   async performOperation(operation: BankOperation) {
     const operations = {
-      [OperationType.CashIn]: async () => await operation.user.cashIn(operation),
-      [OperationType.CashOut]: async () => await operation.user.cashOut(operation),
+      [OperationType.CashIn]: () => operation.user.cashIn(operation),
+      [OperationType.CashOut]: () => operation.user.cashOut(operation),
     }
 
     const userOperation = await operations[operation.type]
 
     if (userOperation) {
-      return await userOperation()
+      return userOperation()
     } else {
       throw new Error('Unknown operation type')
     }
@@ -62,13 +65,13 @@ export class BitBank implements Bank {
   async processOperations() {
     const fees = []
 
-    for (const cleanOperation of this.cleanOperations) {
-      const fee = await this.performOperation(cleanOperation)
+    for (const operation of this.operationsToProcess) {
+      const fee = await this.performOperation(operation)
 
       fees.push(fee)
     }
 
-    this.cleanOperations = []
+    this.cleanOperationsToProcess()
 
     return fees
   }
