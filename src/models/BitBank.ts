@@ -1,34 +1,29 @@
 import fs from 'fs'
-import { BankOperation, OperationType, RawOperation } from '../types'
-import { BitBankJuridicalUser, BitBankNaturalUser } from './bankUsers'
-import { bitBankService } from '../services'
-import { BankService } from '../services/bitBankService'
-import { Bank, BankUserType, BankUser } from '../types'
+import { Bank, BankOperation, BankUser, BankUserType, OperationType, RawOperation } from '../types'
+import { BankService, BitBankService } from '../services'
+import { BitBankUser } from './BankUser'
 
 export class BitBank implements Bank {
-  operations: Array<BankOperation> = []
+  operationsToProcess: Array<BankOperation> = []
   users: Array<BankUser> = []
-  service: BankService = bitBankService
+  service: BankService = new BitBankService()
 
   createBankUser(id: BankUser['id'], type: BankUserType): BankUser {
-    let user = this.users.find(u => u.id === id)
+    const existedUser = this.users.find(user => user.id === id)
 
-    if (user) {
-      return user
+    if (existedUser) {
+      return existedUser
     }
 
-    switch (type) {
-      case BankUserType.Juridical:
-        user = new BitBankJuridicalUser(id, this)
-        break
-      case BankUserType.Natural:
-        user = new BitBankNaturalUser(id, this)
-        break
-    }
+    const newUser = new BitBankUser(id, type, this)
 
-    this.users.push(user)
+    this.users.push(newUser)
 
-    return user
+    return newUser
+  }
+
+  cleanOperationsToProcess() {
+    this.operationsToProcess = []
   }
 
   loadOperationsFromFile(filePath: string) {
@@ -36,9 +31,9 @@ export class BitBank implements Bank {
 
     const rawOperations: Array<RawOperation> = JSON.parse(file)
 
-    const operations = rawOperations.map(o => this.parseRawOperation(o))
+    const operationsToProcess = rawOperations.map(operation => this.parseRawOperation(operation))
 
-    this.operations.push(...operations)
+    this.operationsToProcess.push(...operationsToProcess)
   }
 
   parseRawOperation(rawOperation: RawOperation) {
@@ -53,24 +48,30 @@ export class BitBank implements Bank {
   }
 
   async performOperation(operation: BankOperation) {
-    switch (operation.type) {
-      case OperationType.CashIn:
-        return await operation.user.cashIn(operation)
-      case OperationType.CashOut:
-        return await operation.user.cashOut(operation)
+    const operations = {
+      [OperationType.CashIn]: () => operation.user.cashIn(operation),
+      [OperationType.CashOut]: () => operation.user.cashOut(operation),
+    }
+
+    const userOperation = await operations[operation.type]
+
+    if (userOperation) {
+      return userOperation()
+    } else {
+      throw new Error('Unknown operation type')
     }
   }
 
   async processOperations() {
-    const fees = await this.operations.reduce(async (acc: Promise<Array<number>>, curr) => {
-      await acc
+    const fees = []
 
-      const fee: number = await this.performOperation(curr)
+    for (const operation of this.operationsToProcess) {
+      const fee = await this.performOperation(operation)
 
-      return (await acc).concat([fee])
-    }, Promise.resolve([]))
+      fees.push(fee)
+    }
 
-    this.operations = []
+    this.cleanOperationsToProcess()
 
     return fees
   }

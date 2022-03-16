@@ -1,69 +1,74 @@
-import { BankOperation, OperationConfig, Operation, OperationType, Bank, BankUser } from '../types'
-import { getPercentageFromAmount, getWeekNumber, getYear, round } from '../utils'
+import {
+  Bank,
+  BankOperation,
+  BankUser,
+  Operation,
+  OperationConfig,
+  OperationConfigWithWeekLimit,
+  OperationType,
+} from '../types'
+import { getPercentageFromAmount, getWeekNumber, getYearNumber, hasWeekLimit, round } from '../utils'
 
-export abstract class BitBankUser implements BankUser {
+export class BitBankUser implements BankUser {
   id
   type
 
-  cashInAmountByYear: BankUser['cashInAmountByYear'] = {}
-  cashOutAmountByYear: BankUser['cashOutAmountByYear'] = {}
+  operationLimitsByYear: BankUser['operationLimitsByYear'] = {
+    [OperationType.CashIn]: {},
+    [OperationType.CashOut]: {},
+  }
 
   roundNumber = 2
 
   bank
 
-  protected constructor(id: BankUser['id'], type: BankUser['type'], bank: Bank) {
+  constructor(id: BankUser['id'], type: BankUser['type'], bank: Bank) {
     this.id = id
     this.type = type
     this.bank = bank
   }
 
-  processOperationWithConfig(operation: Operation, config: OperationConfig) {
-    const percentageFee = getPercentageFromAmount(operation.operation.amount, config.percents)
+  getFeeWithLimits(operation: Operation, config: OperationConfigWithWeekLimit) {
+    const limits = this.operationLimitsByYear[operation.type]
 
-    let fee = percentageFee
-
-    let limits
-
-    const year = getYear(operation.date)
+    const year = getYearNumber(operation.date)
     const weekNumber = getWeekNumber(operation.date)
 
-    switch (operation.type) {
-      case OperationType.CashIn:
-        limits = this.cashInAmountByYear
-        break
-      case OperationType.CashOut:
-        limits = this.cashOutAmountByYear
-        break
+    if (!limits[year]) {
+      limits[year] = {
+        [weekNumber]: 0,
+      }
     }
 
-    if (config.week_limit && limits) {
-      if (!limits[year]) {
-        limits[year] = {
-          [weekNumber]: 0,
-        }
-      }
+    limits[year][weekNumber] += operation.operation.amount
 
-      limits[year][weekNumber] += operation.operation.amount
-
-      if (limits[year][weekNumber] > config.week_limit.amount) {
-        if (limits[year][weekNumber] - config.week_limit.amount < operation.operation.amount) {
-          fee = getPercentageFromAmount(limits[year][weekNumber] - config.week_limit.amount, config.percents)
-        }
-      } else {
-        fee = 0
+    if (limits[year][weekNumber] > config.week_limit.amount) {
+      if (limits[year][weekNumber] - config.week_limit.amount < operation.operation.amount) {
+        return getPercentageFromAmount(limits[year][weekNumber] - config.week_limit.amount, config.percents)
       }
+    } else {
+      return 0
+    }
+
+    return getPercentageFromAmount(operation.operation.amount, config.percents)
+  }
+
+  processOperationWithConfig(operation: Operation, config: OperationConfig) {
+    let fee = getPercentageFromAmount(operation.operation.amount, config.percents)
+
+    if (hasWeekLimit(config)) {
+      fee = this.getFeeWithLimits(operation, config)
     }
 
     const minFee = config.min?.amount
     const maxFee = config.max?.amount
 
-    if (minFee) {
-      fee = percentageFee < minFee ? minFee : percentageFee
+    if (minFee && fee < minFee) {
+      fee = minFee
     }
 
-    if (maxFee) {
-      fee = percentageFee > maxFee ? maxFee : percentageFee
+    if (maxFee && fee > maxFee) {
+      fee = maxFee
     }
 
     return round(fee, this.roundNumber)
@@ -72,16 +77,12 @@ export abstract class BitBankUser implements BankUser {
   async cashIn(operation: BankOperation) {
     const config = await this.bank.service.getCashInConfig()
 
-    const fee = this.processOperationWithConfig(operation, config)
-
-    return fee
+    return this.processOperationWithConfig(operation, config)
   }
 
   async cashOut(operation: BankOperation) {
     const config = await this.bank.service.getCashOutConfig(this.type)
 
-    const fee = this.processOperationWithConfig(operation, config)
-
-    return fee
+    return this.processOperationWithConfig(operation, config)
   }
 }

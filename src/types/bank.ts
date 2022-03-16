@@ -1,9 +1,9 @@
 import { BankOperation, RawOperation } from './operation'
-import { BankService } from '../services/bitBankService'
+import { BankService } from '../services'
 import { BankUser, BankUserType } from './bankUser'
 
 export interface Bank {
-  operations: Array<BankOperation>
+  operationsToProcess: Array<BankOperation>
   users: Array<BankUser>
   service: BankService
   loadOperationsFromFile(filePath: string): void

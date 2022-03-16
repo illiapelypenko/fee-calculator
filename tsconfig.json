@@ -3,7 +3,9 @@
     "target": "es5",
     "module": "commonjs",
     "moduleResolution": "node",
-    "esModuleInterop": true,
     "baseUrl": ".",
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "strict": true
   }
 }

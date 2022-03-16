@@ -1,10 +1,9 @@
-import moment from 'moment'
+import getWeek from 'date-fns/getWeek'
+import getYear from 'date-fns/getYear'
 
-moment.updateLocale('en', {
-  week: {
-    dow: 1, // set first day of the week to Monday
-  },
-})
+export const getYearNumber = (date: string) => getYear(new Date(date))
 
-export const getYear = (date: string) => moment(date).year()
-export const getWeekNumber = (date: string) => moment(date).week()
+export const getWeekNumber = (date: string) =>
+  getWeek(new Date(date), {
+    weekStartsOn: 1,
+  })
